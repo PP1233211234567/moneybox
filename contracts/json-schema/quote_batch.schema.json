@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moneybox.local/contracts/quote_batch/v1",
+  "title": "QuoteBatch v1",
+  "description": "Completed local quote input batch. A batch can be incomplete; only a complete batch can produce a valuation snapshot. STALE and STALE_FALLBACK require explicit client confirmation for valuation. Prices are positive canonical decimal strings; provider credentials and holdings never appear here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "id", "status", "request_fingerprint", "provider_versions",
+    "requested_symbols", "success_symbols", "stale_symbols", "failed_symbols",
+    "entries", "completed_at"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "status": {"enum": ["COMPLETE", "COMPLETE_WITH_STALE", "INCOMPLETE"]},
+    "request_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "provider_versions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["selected"],
+      "properties": {"selected": {"type": "string", "minLength": 1}}
+    },
+    "requested_symbols": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/identity"}},
+    "success_symbols": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "stale_symbols": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "failed_symbols": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "entries": {"type": "object", "additionalProperties": {"$ref": "#/$defs/entry"}},
+    "completed_at": {"type": "string", "format": "date-time", "pattern": "Z$"}
+  },
+  "$defs": {
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "market", "symbol", "currency", "share_class"],
+      "properties": {
+        "kind": {"enum": ["STOCK", "ETF", "FUND", "FX", "GOLD"]},
+        "market": {"type": "string", "minLength": 1, "maxLength": 128},
+        "symbol": {"type": "string", "minLength": 1, "maxLength": 128},
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+        "share_class": {"type": "string", "maxLength": 128}
+      }
+    },
+    "quote": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "id", "identity", "price", "currency", "unit", "source", "provider_symbol",
+        "quoted_at", "fetched_at", "delay", "session"
+      ],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "identity": {"$ref": "#/$defs/identity"},
+        "price": {"type": "string", "pattern": "^(?:0\\.[0-9]*[1-9]|[1-9][0-9]*(?:\\.[0-9]*[1-9])?)$"},
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+        "unit": {"enum": ["CURRENCY_PER_SHARE", "CURRENCY_PER_FOREIGN_UNIT", "CURRENCY_PER_GRAM", "CURRENCY_PER_TROY_OUNCE"]},
+        "source": {"type": "string", "minLength": 1},
+        "provider_symbol": {"type": "string", "minLength": 1},
+        "quoted_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+        "fetched_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+        "delay": {"enum": ["REALTIME", "DELAYED", "UNKNOWN", "MANUAL"]},
+        "session": {"type": "string", "minLength": 1}
+      }
+    },
+    "entry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["identity", "status"],
+      "properties": {
+        "identity": {"$ref": "#/$defs/identity"},
+        "status": {"enum": ["SUCCESS", "STALE", "STALE_FALLBACK", "FAILED"]},
+        "quote": {"$ref": "#/$defs/quote"},
+        "cache_hit": {"type": "boolean"},
+        "reason": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "FAILED"}}, "required": ["status"]},
+          "then": {"required": ["reason"], "not": {"required": ["quote"]}},
+          "else": {"required": ["quote", "cache_hit"]}
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:moneybox:backup:v1",
+  "title": "Moneybox full JSON backup container v1",
+  "description": "Plaintext local export. The payload is a JSON-encoded project state and must also pass ProjectStore validation after its SHA-256 hash is checked.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "backup_version", "manifest", "payload"],
+  "properties": {
+    "format": {"const": "moneybox-full-json"},
+    "backup_version": {"const": 1},
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_schema_version", "created_at_utc", "encryption", "content_sha256", "content_bytes", "counts"],
+      "properties": {
+        "project_schema_version": {"type": "integer", "minimum": 1},
+        "source_generation": {"type": "integer", "minimum": 0},
+        "created_at_utc": {"type": "string", "format": "date-time"},
+        "encryption": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scheme"],
+          "properties": {"scheme": {"const": "none"}}
+        },
+        "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "content_bytes": {"type": "integer", "minimum": 0, "maximum": 67108864},
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["accounts", "instruments", "events", "quotes", "mappings", "beans", "ecology_entries"],
+          "properties": {
+            "accounts": {"type": "integer", "minimum": 0},
+            "instruments": {"type": "integer", "minimum": 0},
+            "events": {"type": "integer", "minimum": 0},
+            "quotes": {"type": "integer", "minimum": 0},
+            "mappings": {"type": "integer", "minimum": 0},
+            "beans": {"type": "integer", "minimum": 0},
+            "ecology_entries": {"type": "integer", "minimum": 0}
+          }
+        }
+      }
+    },
+    "payload": {"type": "string", "minLength": 2}
+  }
+}

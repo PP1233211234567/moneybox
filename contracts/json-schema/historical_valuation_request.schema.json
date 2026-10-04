@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:moneybox:historical-valuation-request:v1",
+  "title": "Moneybox historical valuation interval request",
+  "description": "A read-only interval over actual valuation points. The caller supplies the complete authoritative ledger event slice and prefix hash chain; no daily marks are synthesized.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "start_snapshot_id", "end_snapshot_id", "snapshots", "ledger_events", "external_flows"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "start_snapshot_id": {"$ref": "#/$defs/id"},
+    "end_snapshot_id": {"$ref": "#/$defs/id"},
+    "snapshots": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/snapshot"}},
+    "ledger_events": {"type": "array", "items": {"$ref": "#/$defs/ledgerEvent"}},
+    "external_flows": {"type": "array", "items": {"$ref": "#/$defs/externalFlow"}}
+  },
+  "$defs": {
+    "id": {"type": "string", "minLength": 1},
+    "utc": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+    "decimal": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"},
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fxLock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "currency", "base_currency", "rate", "quoted_at", "source", "status"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "currency": {"$ref": "#/$defs/currency"},
+        "base_currency": {"$ref": "#/$defs/currency"},
+        "rate": {"$ref": "#/$defs/decimal"},
+        "quoted_at": {"$ref": "#/$defs/utc"},
+        "source": {"$ref": "#/$defs/id"},
+        "status": {"enum": ["CURRENT", "STALE_CONFIRMED"]}
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "currency", "native_value", "base_value", "fx_lock_id", "source_at", "source", "source_status"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "currency": {"$ref": "#/$defs/currency"},
+        "native_value": {"$ref": "#/$defs/decimal"},
+        "base_value": {"$ref": "#/$defs/decimal"},
+        "fx_lock_id": {"type": "string"},
+        "source_at": {"$ref": "#/$defs/utc"},
+        "source": {"$ref": "#/$defs/id"},
+        "source_status": {"enum": ["CURRENT", "STALE_CONFIRMED"]}
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "id", "at", "ledger_event_sequence", "ledger_hash", "base_currency", "asset_total", "valuation_quality", "coverage", "components", "fx_locks"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "id": {"$ref": "#/$defs/id"},
+        "at": {"$ref": "#/$defs/utc"},
+        "ledger_event_sequence": {"type": "integer", "minimum": 0},
+        "ledger_hash": {"$ref": "#/$defs/hash"},
+        "base_currency": {"$ref": "#/$defs/currency"},
+        "asset_total": {"$ref": "#/$defs/decimal"},
+        "valuation_quality": {"enum": ["CURRENT", "STALE_CONFIRMED"]},
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "ledger_event_sequence", "expected_component_ids"],
+          "properties": {
+            "status": {"enum": ["COMPLETE", "INCOMPLETE"]},
+            "ledger_event_sequence": {"type": "integer", "minimum": 0},
+            "expected_component_ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}
+          }
+        },
+        "components": {"type": "array", "items": {"$ref": "#/$defs/component"}},
+        "fx_locks": {"type": "array", "items": {"$ref": "#/$defs/fxLock"}}
+      }
+    },
+    "ledgerEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sequence", "effective_at", "type", "external", "ledger_hash_before", "ledger_hash_after"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "sequence": {"type": "integer", "minimum": 1},
+        "effective_at": {"$ref": "#/$defs/utc"},
+        "type": {"$ref": "#/$defs/id"},
+        "external": {"type": "boolean"},
+        "delta": {"$ref": "#/$defs/decimal"},
+        "currency": {"$ref": "#/$defs/currency"},
+        "ledger_hash_before": {"$ref": "#/$defs/hash"},
+        "ledger_hash_after": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "externalFlow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "sequence", "effective_at", "currency", "amount_native", "amount_base", "fx_lock"],
+      "properties": {
+        "event_id": {"$ref": "#/$defs/id"},
+        "sequence": {"type": "integer", "minimum": 1},
+        "effective_at": {"$ref": "#/$defs/utc"},
+        "currency": {"$ref": "#/$defs/currency"},
+        "amount_native": {"$ref": "#/$defs/decimal"},
+        "amount_base": {"$ref": "#/$defs/decimal"},
+        "fx_lock": {"oneOf": [{"$ref": "#/$defs/fxLock"}, {"type": "object", "maxProperties": 0}]}
+      }
+    }
+  }
+}

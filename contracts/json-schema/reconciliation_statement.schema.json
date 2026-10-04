@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:moneybox:reconciliation-statement:v1",
+  "title": "Local reconciliation statement v1",
+  "description": "User mapped statement facts for read-only comparison against one exact ledger hash. A matched result covers only cash, active position quantities and recorded trade fees; account market totals and settlement state remain outside this contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "ledger_hash", "as_of", "pending_settlements", "cash_balances", "positions", "fees"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "ledger_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "as_of": {"type": "string", "format": "date-time"},
+    "pending_settlements": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {"status": {"type": "string"}}
+    },
+    "cash_balances": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["account_id", "currency", "amount"],
+        "properties": {
+          "account_id": {"type": "string", "minLength": 1},
+          "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+          "amount": {"$ref": "#/$defs/nonnegative_decimal"}
+        }
+      }
+    },
+    "positions": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["account_id", "instrument_id", "quantity"],
+        "properties": {
+          "account_id": {"type": "string", "minLength": 1},
+          "instrument_id": {"type": "string", "minLength": 1},
+          "quantity": {"$ref": "#/$defs/nonnegative_decimal"}
+        }
+      }
+    },
+    "fees": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["event_id", "currency", "amount"],
+        "properties": {
+          "event_id": {"type": "string", "minLength": 1},
+          "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+          "amount": {"$ref": "#/$defs/nonnegative_decimal"}
+        }
+      }
+    },
+    "account_total_checkpoints": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["account_id", "currency", "amount"],
+        "properties": {
+          "account_id": {"type": "string", "minLength": 1},
+          "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+          "amount": {"$ref": "#/$defs/nonnegative_decimal"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonnegative_decimal": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    }
+  }
+}

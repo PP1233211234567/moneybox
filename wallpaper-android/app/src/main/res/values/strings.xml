@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">金豆罐壁纸平台诊断</string>
+    <string name="wallpaper_name">金豆罐平台诊断壁纸</string>
+    <string name="wallpaper_description">用于验证系统动态壁纸、预览、生命周期和运动传感器；不显示正式资产。</string>
+</resources>

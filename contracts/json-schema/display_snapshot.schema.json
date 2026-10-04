@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moneybox.local/contracts/display_snapshot/v1",
+  "title": "Read-only display snapshot v1",
+  "description": "Minimal published payload for App and future wallpaper renderers. PREVIOUS_COMPLETE is explicitly stale; no account, holding, tax or source text is allowed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "data_kind", "demo_badge", "project_generation",
+    "snapshot_status", "privacy_mode", "skin_id", "mapping_revision_id",
+    "inventory_revision", "selected_jar_id", "jar_count",
+    "equivalent_grams", "beans"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "data_kind": {"enum": ["personal", "demo"]},
+    "demo_badge": {"type": "boolean"},
+    "project_generation": {"type": "string", "pattern": "^(0|[1-9][0-9]*)$"},
+    "snapshot_status": {"enum": ["EMPTY", "CURRENT", "PREVIOUS_COMPLETE"]},
+    "privacy_mode": {"enum": ["show_total", "hide_total"]},
+    "skin_id": {"enum": ["basic", "ecology"]},
+    "mapping_revision_id": {"type": "string"},
+    "inventory_revision": {"type": "string"},
+    "selected_jar_id": {"type": "string"},
+    "jar_count": {"type": "integer", "minimum": 0},
+    "equivalent_grams": {"type": "string", "pattern": "^(0|[1-9][0-9]*)(?:\\.[0-9]+)?$"},
+    "beans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "denomination_grams"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "denomination_grams": {"enum": [1, 10]}
+        }
+      }
+    },
+    "display_amount": {"type": "string", "pattern": "^(0|[1-9][0-9]*)(?:\\.[0-9]+)?$"},
+    "display_currency": {"type": "string", "pattern": "^[A-Z]{3}$"}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "snapshot_status": {"const": "CURRENT"},
+          "privacy_mode": {"const": "show_total"}
+        },
+        "required": ["snapshot_status", "privacy_mode"]
+      },
+      "then": {"required": ["display_amount", "display_currency"]},
+      "else": {
+        "not": {"anyOf": [
+          {"required": ["display_amount"]},
+          {"required": ["display_currency"]}
+        ]}
+      }
+    },
+    {
+      "if": {"properties": {"data_kind": {"const": "demo"}}, "required": ["data_kind"]},
+      "then": {"properties": {"demo_badge": {"const": true}}},
+      "else": {"properties": {"demo_badge": {"const": false}}}
+    }
+  ]
+}

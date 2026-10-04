@@ -1,0 +1,54 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/visual/personal_app.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/jar_view.tscn" id="2_crate"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(20, 20)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.98, 0.97, 0.94, 1)
+roughness = 0.9
+shading_mode = 0
+
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 1
+background_color = Color(0.98, 0.97, 0.94, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.89, 0.84, 0.76, 1)
+ambient_light_energy = 0.65
+reflected_light_source = 2
+reflected_light_color = Color(0.94, 0.88, 0.78, 1)
+reflected_light_energy = 0.4
+
+[node name="PersonalMain" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.08, 0)
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="JarView" parent="." instance=ExtResource("2_crate")]
+
+[node name="KeyLight" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.74, -0.45, 0)
+light_energy = 1.6
+shadow_enabled = true
+
+[node name="FillLight" type="OmniLight3D" parent="."]
+position = Vector3(-1.8, 2.7, 2.7)
+light_color = Color(0.82, 0.9, 1, 1)
+light_energy = 1.0
+omni_range = 8.0
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_main")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+position = Vector3(0, 0.99, 5.0)
+rotation = Vector3(-0.03, 0, 0)
+projection = 1
+size = 5.4
+current = true
+

@@ -1,0 +1,72 @@
+# Godot generated files
+.godot/
+game/.godot/
+*.translation
+
+# Blender backups and temporary files
+*.blend1
+*.blend2
+*.blend@*
+*.tmp
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*.json
+*secret*
+*secrets*
+*.jks
+*.keystore
+
+# Local dependency environments
+.venv/
+venv/
+node_modules/
+
+# Android local configuration and build output
+.gradle/
+local.properties
+build/
+*.apk
+*.aab
+*.pck
+
+# Personal runtime state and database files (schemas remain tracked)
+*.0.json
+*.1.json
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Logs and transient output
+*.log
+__pycache__/
+*.pyc
+logs/
+temp/
+tmp/
+game/tests/.backup-test-*/
+game/tests/.backup-scene-test-*/
+game/tests/.csv-export-test-*/
+game/tests/.csv-export-scene-test-*/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/

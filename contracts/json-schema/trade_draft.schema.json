@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moneybox.local/contracts/trade_draft/v1",
+  "title": "TradeDraft v1",
+  "description": "Unconfirmed local or remote parsing result. It is never a ledger command.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "id", "revision", "source_text_local_ref", "fields",
+    "confidence", "missing_fields", "conflicts", "assumptions", "status", "created_at"
+  ],
+  "if": {"properties": {"status": {"const": "confirmed"}}, "required": ["status"]},
+  "then": {"required": ["confirmed_command_id", "confirmed_tax_amount"]},
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "revision": {"type": "integer", "minimum": 1},
+    "source_text_local_ref": {"type": "string", "minLength": 1, "maxLength": 128},
+    "fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "direction": {"$ref": "#/$defs/direction_field"},
+        "account_id": {"$ref": "#/$defs/text_field"},
+        "instrument_id": {"$ref": "#/$defs/text_field"},
+        "quantity": {"$ref": "#/$defs/decimal_field"},
+        "currency": {"$ref": "#/$defs/currency_field"},
+        "trade_date": {"$ref": "#/$defs/date_field"},
+        "settlement_date": {"$ref": "#/$defs/date_field"},
+        "total_amount": {"$ref": "#/$defs/decimal_field"},
+        "amount_basis": {"$ref": "#/$defs/amount_basis_field"},
+        "unit_price": {"$ref": "#/$defs/decimal_field"},
+        "fee": {"$ref": "#/$defs/decimal_field"},
+        "tax_amount": {"$ref": "#/$defs/decimal_field"}
+      }
+    },
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "missing_fields": {
+      "type": "array", "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 64}
+    },
+    "conflicts": {
+      "type": "array", "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 128}
+    },
+    "assumptions": {
+      "type": "array", "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 128}
+    },
+    "status": {"enum": ["pending", "confirmed"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "confirmed_command_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "confirmed_tax_amount": {"const": "0"}
+  },
+  "$defs": {
+    "field_meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "source_span", "confidence", "origin"],
+      "properties": {
+        "value": {"type": "string"},
+        "source_span": {"type": "string", "maxLength": 256},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "origin": {"enum": ["local_rule", "remote_ai", "user"]}
+      }
+    },
+    "text_field": {
+      "allOf": [
+        {"$ref": "#/$defs/field_meta"},
+        {"properties": {"value": {"type": "string", "minLength": 1, "maxLength": 128}}}
+      ]
+    },
+    "decimal_field": {
+      "allOf": [
+        {"$ref": "#/$defs/field_meta"},
+        {"properties": {"value": {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"}}}
+      ]
+    },
+    "direction_field": {
+      "allOf": [
+        {"$ref": "#/$defs/field_meta"},
+        {"properties": {"value": {"enum": ["buy", "sell"]}}}
+      ]
+    },
+    "currency_field": {
+      "allOf": [
+        {"$ref": "#/$defs/field_meta"},
+        {"properties": {"value": {"type": "string", "pattern": "^[A-Z]{3}$"}}}
+      ]
+    },
+    "date_field": {
+      "allOf": [
+        {"$ref": "#/$defs/field_meta"},
+        {"properties": {"value": {"type": "string", "format": "date"}}}
+      ]
+    },
+    "amount_basis_field": {
+      "allOf": [
+        {"$ref": "#/$defs/field_meta"},
+        {"properties": {"value": {"enum": ["cash_flow", "gross_trade"]}}}
+      ]
+    }
+  }
+}

@@ -1,0 +1,81 @@
+extends SceneTree
+
+const PersonalFlow = preload("res://scripts/data/personal_flow.gd")
+const DemoFlow = preload("res://scripts/data/demo_flow.gd")
+const Store = preload("res://scripts/data/project_store.gd")
+const Ledger = preload("res://scripts/data/ledger_core.gd")
+var failures := 0
+
+
+func _initialize() -> void:
+	var directory := ProjectSettings.globalize_path("res://").get_base_dir().path_join("tests/data/tmp")
+	DirAccess.make_dir_recursive_absolute(directory)
+	var base := directory.path_join("personal-" + str(Time.get_ticks_usec()))
+	var flow := PersonalFlow.new(base)
+	var empty := flow.load()
+	_check(empty.ok and not empty.initialized and empty.generation == 0, "new personal project is empty")
+	_check(empty.display_snapshot.snapshot_status == "EMPTY" and empty.display_snapshot.beans.is_empty(), "empty account publishes an empty jar display")
+	var bad_price := flow.create_opening_cash("open-bad-price", "cash", "现金", "50000", "0", "2026-09-27T00:00:00Z")
+	_check(not bad_price.ok and flow.load().generation == 0, "bad manual price does not save")
+	var float_amount := flow.create_opening_cash("open-float", "cash", "现金", 50000.0, "1000", "2026-09-27T00:00:00Z")
+	_check(not float_amount.ok and flow.load().generation == 0, "financial float does not save")
+	var created := flow.create_opening_cash("open-1", "cash", "现金", "50000", "1000", "2026-09-27T00:00:00Z")
+	_check(created.ok and created.initialized and created.amount == "50000" and created.equivalent_grams == "50", "opening maps user-entered amount and price")
+	_check(created.view.beans.size() == 50 and not created.view.demo and created.manual_gold_quote.source == "USER_MANUAL", "personal beans and source are explicit")
+	_check(created.display_snapshot.snapshot_status == "CURRENT" and created.display_snapshot.display_amount == "50000" and created.display_snapshot.beans.size() == 50, "personal App uses a versioned current display payload")
+	var duplicate_opening := PersonalFlow.new(base).create_opening_cash("open-1", "cash", "现金", "50000", "1000", "2026-09-27T00:00:00Z")
+	_check(duplicate_opening.ok and duplicate_opening.duplicate and duplicate_opening.generation == created.generation, "opening retry does not create a second account")
+	var conflicting_retry := PersonalFlow.new(base).create_opening_cash("open-1", "cash", "现金", "60000", "1000", "2026-09-27T00:00:00Z")
+	_check(not conflicting_retry.ok and conflicting_retry.error == "IDEMPOTENCY_KEY_CONFLICT", "opening key cannot be reused with different amount")
+	var different_opening := PersonalFlow.new(base).create_opening_cash("open-2", "cash", "现金", "100", "1000", "2026-09-27T00:00:00Z")
+	_check(not different_opening.ok and different_opening.error == "ALREADY_INITIALIZED", "different opening is rejected")
+	var changed := flow.record_cash_change("deposit-1", "cash", "1000", "2026-09-27T01:00:00Z", created.generation)
+	_check(changed.ok and changed.amount == "51000" and changed.equivalent_grams == "51" and changed.view.beans.size() == 51, "committed deposit updates mapping and bean")
+	var reopened := PersonalFlow.new(base).load()
+	_check(reopened.ok and reopened.generation == changed.generation and reopened.view.beans.size() == 51, "restart restores same personal revision")
+	var replay := PersonalFlow.new(base).record_cash_change("deposit-1", "cash", "1000", "2026-09-27T01:00:00Z", created.generation)
+	_check(replay.ok and replay.duplicate and replay.generation == changed.generation, "retry cannot double deposit")
+	var stale := PersonalFlow.new(base).record_cash_change("deposit-2", "cash", "1000", "2026-09-27T02:00:00Z", created.generation)
+	_check(not stale.ok and stale.error == "GENERATION_CONFLICT" and PersonalFlow.new(base).load().amount == "51000", "stale expected generation cannot overwrite")
+	var hidden := flow.set_presentation("privacy_mode", "hide_total", changed.generation)
+	_check(hidden.ok and hidden.privacy_mode == "hide_total" and hidden.amount == "51000", "personal privacy does not change finance")
+	_check(not hidden.display_snapshot.has("display_amount") and not hidden.display_snapshot.has("display_currency"), "private display payload omits monetary fields")
+	var ecology := flow.set_presentation("skin_id", "ecology", hidden.generation)
+	_check(ecology.ok and ecology.view.skin_id == "ecology" and ecology.view.beans.size() == 51, "personal skin keeps beans")
+	var restored_presentation := PersonalFlow.new(base).load()
+	_check(restored_presentation.privacy_mode == "hide_total" and restored_presentation.view.skin_id == "ecology", "personal presentation restores")
+	var store := Store.new(base)
+	var pending_project := store.load_project()
+	var imported := Ledger.apply(pending_project.state.ledger, {"command_id": "pending-import-event", "type": "cash_delta", "account_id": "cash", "delta": "500", "external": true, "effective_at": "2026-09-27T03:00:00Z"})
+	_check(imported.ok, "pending fixture ledger event accepted")
+	if imported.ok:
+		pending_project.state.ledger = imported.state
+		pending_project.state.valuation_pending = {"reason": "CSV_IMPORT", "ledger_hash": Store.canonical_ledger_hash(imported.state)}
+		var pending_save := store.save_project(pending_project.state, pending_project.generation)
+		_check(pending_save.ok, "pending fixture saved")
+		var pending_view := PersonalFlow.new(base).load()
+		_check(pending_view.ok and not pending_view.valuation_pending.is_empty() and pending_view.amount == "51000", "last mapped amount is flagged pending")
+		_check(pending_view.display_snapshot.snapshot_status == "PREVIOUS_COMPLETE" and not pending_view.display_snapshot.has("display_amount"), "pending display cannot publish a stale amount")
+		var blocked_change := PersonalFlow.new(base).record_cash_change("cash-while-pending", "cash", "100", "2026-09-27T04:00:00Z", pending_save.generation)
+		_check(not blocked_change.ok and blocked_change.error == "VALUATION_PENDING", "cash change cannot remap incomplete valuation")
+	var wrong_kind_base := directory.path_join("personal-on-demo-" + str(Time.get_ticks_usec()))
+	_check(DemoFlow.new(wrong_kind_base).load_or_create().ok, "demo fixture created")
+	var wrong_kind := PersonalFlow.new(wrong_kind_base).load()
+	_check(not wrong_kind.ok and wrong_kind.error == "NOT_PERSONAL_DATA", "personal flow refuses demo project")
+	var large_base := directory.path_join("personal-multi-" + str(Time.get_ticks_usec()))
+	var multi := PersonalFlow.new(large_base)
+	var first_jar := multi.create_opening_cash("large-open", "cash", "现金", "301000", "1000", "2026-09-27T00:00:00Z")
+	_check(first_jar.ok and first_jar.jar_ids.size() == 2 and first_jar.view.beans.size() == 300, "301g creates two jars and first shows 300")
+	if first_jar.ok:
+		var second_jar := multi.select_jar(first_jar.jar_ids[1], first_jar.generation)
+		_check(second_jar.ok and second_jar.view.beans.size() == 1 and second_jar.amount == "301000", "select second jar preserves total")
+		var jar_restart := PersonalFlow.new(large_base).load()
+		_check(jar_restart.ok and jar_restart.selected_jar == first_jar.jar_ids[1] and jar_restart.view.beans.size() == 1, "selected jar survives restart")
+	print("personal flow: %s" % ("passed" if failures == 0 else "%d failures" % failures))
+	quit(0 if failures == 0 else 1)
+
+
+func _check(condition: bool, label: String) -> void:
+	if not condition:
+		printerr("personal flow failure: ", label)
+		failures += 1
