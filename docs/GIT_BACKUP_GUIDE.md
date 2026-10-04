@@ -1,10 +1,14 @@
 # 金豆罐 Git 版本备份与恢复
 
-## 当前准备状态（2026-10-04）
+## 当前备份状态（2026-10-04）
 
-用户已明确授权为本项目建立 Git 提交并上传自己的远程仓库；此前“不提交或推送”的限制由该指令覆盖。检查时项目已经有 `.git`，当前分支为 `master`，但尚无提交、无远程地址、无已配置的提交作者。远程上传仍需用户提供自己的仓库地址及提交作者名称、邮箱；不得索取密码或访问令牌。
+用户已明确授权为本项目建立 Git 提交并上传自己的远程仓库；此前“不提交或推送”的限制由该指令覆盖。当前分支为 `master`，`origin` 为 `https://github.com/PP1233211234567/moneybox.git`；提交作者配置已核对为用户提供的信息。
 
-本轮已准备第一份快照的上传范围，281个文件已暂存；首次 `git add --all -- .` 因沙盒禁止写 `.git/index.lock` 退出码128，获准后重跑退出码0。尚未创建提交或上传。实际提交须以 `git log` 中的 commit 为准；实际远程备份须核对远程分支的 commit 与本地一致。
+**首次快照已上传并真实核对**：`4d2d0478c0f917a8c6b4a6f93b719cd39f700c96`，提交说明“备份金豆罐当前开发基线”。用户提供仓库地址后再次检查时，该提交和远程配置已存在，工作区干净；本轮没有重复创建首次快照。`git ls-remote` 返回远程 HEAD 和 `refs/heads/master` 均为上述哈希，与本地 HEAD 和 `origin/master` 一致，退出码0。
+
+核对时首次沙盒网络调用因无法连接本地代理退出码128；获准在沙盒外只读重跑后成功。未打印凭证、修改游戏功能或运行重复的 Godot 回归。GitHub 仓库可见性未通过 API 核对，是否为 Private 请在仓库网页确认。
+
+此前准备阶段共有281个文件暂存；首次 `git add --all -- .` 因沙盒禁止写 `.git/index.lock` 退出码128，获准后重跑退出码0。实际提交以 `git log` 中的 commit 为准；实际远程备份以远程分支和本地哈希核对为准。
 
 ## 纳入与排除
 
@@ -25,7 +29,7 @@
 3. 创建有具体说明的提交，例如“修复竖屏布局与金豆碰撞”；推送该提交到已核对的个人远程仓库。
 4. 本地 commit 提供可回退记录，远程 push 提供另一份副本。只上传一次不能自动备份以后没有提交或推送的修改。
 
-以下命令均在普通 PowerShell 的项目根目录执行；后两条需要先完成首次提交和远程配置。推送发生前应检查差异。
+以下命令均在普通 PowerShell 的项目根目录执行；首次提交和远程配置已完成。推送发生前应检查差异。
 
 ```powershell
 Set-Location -LiteralPath 'D:\GameProjects\moneybox'
@@ -33,6 +37,17 @@ Set-Location -LiteralPath 'D:\GameProjects\moneybox'
 & 'D:\Apps\Git\cmd\git.exe' diff
 & 'D:\Apps\Git\cmd\git.exe' log --oneline -n 10
 ```
+
+后续每阶段的代码与验证结果确认后，可在 Codex 使用暂存、Commit 和 Push 操作，或在普通 PowerShell 依次执行以下命令。提交说明应换成当次实际修改；没有新改动时不需要新建提交。
+
+```powershell
+Set-Location -LiteralPath 'D:\GameProjects\moneybox'
+& 'D:\Apps\Git\cmd\git.exe' add --all -- .
+& 'D:\Apps\Git\cmd\git.exe' commit -m '填写本次实际修改说明'
+& 'D:\Apps\Git\cmd\git.exe' push
+```
+
+每条命令成功后再执行下一条。推送后可核对 `git rev-parse HEAD` 与 `git ls-remote origin refs/heads/master` 返回的哈希一致。已排除的 APK 和个人账本不随代码推送。
 
 ## 改错后的恢复方式
 
